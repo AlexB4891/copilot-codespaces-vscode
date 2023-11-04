@@ -1,76 +1,50 @@
-// Create a web server on a blog
-// Usage: node comments.js
+// Create a web server that can respond to requests for comments
+// from a given user.  The url /comments/:name should return
+// a string of comments separated by newlines, for example:
+//   /comments/steve
+// might return:
+//   node.js is awesome
+//   javascript is awesome
+//   i love coding
+// If a user doesn't exist, it should return a 404 status code.
+// Hint: you can get the name from req.params.name
+// Hint: you can set the status code with res.status()
+// Hint: remember to call next() when you're done or your server will hang!
+var express = require('express');
+var app = express();
+var fs = require('fs');
+var bodyParser = require('body-parser');
+var morgan = require('morgan');
+var port = 8080;
 
-const http = require('http');
-const items = [];
-const qs = require('querystring');
+var comments = {
+  'steve': [
+    'node.js is awesome',
+    'javascript is awesome',
+    'i love coding'
+  ],
+  'bob': [
+    'hello',
+    'world',
+    'i love coding'
+  ]
+};
 
-const server = http.createServer(function(req, res) {
-  if ('/' == req.url) {
-    switch (req.method) {
-      case 'GET':
-        show(res);
-        break;
-      case 'POST':
-        add(req, res);
-        break;
-      default:
-        badRequest(res);
-    }
+app.use(morgan('dev'));
+app.use(bodyParser.urlencoded({extended: true}));
+app.use(bodyParser.json());
+
+app.get('/comments/:name', function(req, res, next) {
+  var name = req.params.name;
+  var comment = comments[name];
+  if (comment) {
+    res.send(comment.join('\n'));
   } else {
-    notFound(res);
+    res.status(404).send('No such user exists!');
   }
+  next();
 });
 
-server.listen(3000);
-
-function show(res) {
-  const html = `
-    <html>
-      <head>
-        <title>Todo List</title>
-      </head>
-      <body>
-        <h1>Todo List</h1>
-        <ul>
-          ${items.map(function(item) {
-            return `<li>${item}</li>`;
-          }).join('')}
-        </ul>
-        <form method="post" action="/">
-          <p><input type="text" name="item" /></p>
-          <p><input type="submit" value="Add Item" /></p>
-        </form>
-      </body>
-    </html>
-  `;
-
-  res.setHeader('Content-Type', 'text/html');
-  res.setHeader('Content-Length', Buffer.byteLength(html));
-  res.end(html);
-}
-
-function add(req, res) {
-  let body = '';
-  req.setEncoding('utf8');
-  req.on('data', function(chunk) { body += chunk });
-  req.on('end', function() {
-    const obj = qs.parse(body);
-    items.push(obj.item);
-    show(res);
-  });
-}
-
-function badRequest(res) {
-  res.statusCode = 400;
-  res.setHeader('Content-Type', 'text/plain');
-  res.end('Bad Request');
-}
-
-function notFound(res) {
-  res.statusCode = 404;
-  res.setHeader('Content-Type', 'text/plain');
-  res.end('Not Found');
-}
-
-
+app.listen(port, function() {
+  console.log('Listening on port ' + port);
+});
