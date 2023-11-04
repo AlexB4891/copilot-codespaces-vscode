@@ -1,4 +1,4 @@
-// Create a web server that can respond to requests for comments
+// Create a web server
 // from a given user.  The url /comments/:name should return
 // a string of comments separated by newlines, for example:
 //   /comments/steve
