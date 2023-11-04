@@ -1,77 +1,46 @@
-// Create a web server
+// create a web server with Node.js
+// run: node comments.js
+// then: http://localhost:3000
 
+var http = require('http');
+var url = require('url');
+var items = [];
 
-// 1. Create a web server
-const express = require('express');
-const app = express();
-const Joi = require('joi');
-const cors = require('cors');
-const comments = require('./comments');
-const port = 3000;
+var server = http.createServer(function(req, res){
+	switch(req.method){
+		case 'POST':
+			var item = '';
+			req.setEncoding('utf8');
+			req.on('data', function(chunk){
+				item += chunk;
+			});
+			req.on('end', function(){
+				items.push(item);
+				res.end('OK\n');
+			});
+			break;
+		case 'GET':
+			items.forEach(function(item, i){
+				res.write(i + ') ' + item + '\n');
+			});
+			res.end();
+			break;
+		case 'DELETE':
+			var path = url.parse(req.url).pathname;
+			var i = parseInt(path.slice(1), 10);
 
-app.use(express.json());
-app.use(cors());
-
-// 2. Create a route for GET /comments
-app.get('/comments', (req, res) => {
-    res.send(comments);
+			if(isNaN(i)){
+				res.statusCode = 400;
+				res.end('Invalid item id');
+			}else if(!items[i]){
+				res.statusCode = 404;
+				res.end('Item not found');
+			}else{
+				items.splice(i, 1);
+				res.end('OK\n');
+			}
+			break;
+	}
 });
 
-// 3. Create a route for POST /comments
-app.post('/comments', (req, res) => {
-    const { error } = validateComment(req.body);
-    if (error) {
-        res.status(400).send(error.details[0].message);
-        return;
-    }
-
-    const comment = {
-        id: comments.length + 1,
-        name: req.body.name,
-        email: req.body.email,
-        comment: req.body.comment
-    };
-    comments.push(comment);
-    res.send(comment);
-});
-
-// 4. Create a route for GET /comments/:id
-app.get('/comments/:id', (req, res) => {
-    const comment = comments.find(c => c.id === parseInt(req.params.id));
-    if (!comment) {
-        res.status(404).send('The comment with the given ID was not found.');
-        return;
-    }
-    res.send(comment);
-});
-
-// 5. Create a route for PUT /comments/:id
-app.put('/comments/:id', (req, res) => {
-    const comment = comments.find(c => c.id === parseInt(req.params.id));
-    if (!comment) {
-        res.status(404).send('The comment with the given ID was not found.');
-        return;
-    }
-
-    const { error } = validateComment(req.body);
-    if (error) {
-        res.status(400).send(error.details[0].message);
-        return;
-    }
-
-    comment.name = req.body.name;
-    comment.email = req.body.email;
-    comment.comment = req.body.comment;
-    res.send(comment);
-});
-
-// 6. Create a route for DELETE /comments/:id
-app.delete('/comments/:id', (req, res) => {
-    const comment = comments.find(c => c.id === parseInt(req.params.id));
-    if (!comment) {
-        res.status(404).send('The comment with the given ID was not found.');
-        return;
-    }
-
-    const index = comments.indexOf(comment);
-    comments
+server.listen(3000);
